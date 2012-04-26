@@ -33,4 +33,3 @@ def eval(x, env):
 			return proc(env,*x[1:])
 		raise ValueError("%s = %s is not a procedure" % (to_string(x[0]),to_string(proc)))
 	return x
-

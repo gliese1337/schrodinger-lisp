@@ -1,7 +1,7 @@
 ### built-in globals
 
 from seval import eval, Env
-from sparser import to_string, isa, Symbol
+from sparser import tokenize, parse, to_string, isa, Symbol
 
 class Closure():
 	def __init__(self, clos_env, vars, sym, body):
@@ -13,13 +13,11 @@ class Closure():
 	def __call__(self, call_env, *args):
 		new_env = Env(zip(self.vars, args), self.clos_env)
 		new_env[self.sym] = call_env
+		if not 'self' in args: new_env['self'] = self #safe recursion
 		return eval(self.body, new_env)
 		
 	def __repr__(self):
 		return "vau (%s)"%(','.join(self.vars),)
-
-def vau(clos_env, vars, call_env_sym, body):
-		return Closure(clos_env, vars, call_env_sym, body)
 
 def define(v,var,e):
 	val = eval(e, v)
@@ -31,15 +29,13 @@ def setvar(v,var,e):
 	env.find(var)[var] = val
 	return val
 
-def quote(v,exp): return exp
-
 def cond(v,*x):
 	for (p, e) in x:
 		if eval(p, v):
 			return eval(e, v)
 	raise ValueError("No Branch Evaluates to True")
 
-def begin(v,*x):
+def sequence(v,*x):
 	val = 0
 	for e in x:
 		val = eval(e, v)
@@ -54,7 +50,7 @@ def wrap(v,p):
 	p = eval(p,v)
 	return lambda v,*x: p(v,*[eval(expr,v) for expr in x])
 
-global_env = Env({
+basic_env = Env({
 	'+':	lambda v,x,y:eval(x,v)+eval(y,v),
 	'-':	lambda v,x,y:eval(x,v)-eval(y,v),
 	'*':	lambda v,x,y:eval(x,v)*eval(y,v),
@@ -82,14 +78,13 @@ global_env = Env({
 	'cond':	cond,
 	':=':	define,
 	'<-':	setvar,
-	'vau':	vau,
-	'q': 	lambda v,x: x,
-#	'quote': lambda v,x: x,
-	'begin': begin,
+	'vau':	lambda v,args,sym,body: Closure(v,args,sym,body),
+	'quote': lambda v,x: x,
+	'seq': sequence,
 	'print': vprint,
 	'eval': lambda v,e,x: eval(eval(x,v),eval(e,v)),
-	'@': lambda v,e,*x: eval(x,eval(e,v)),
 	'wrap': wrap
 })
 
+global_env = Env({},basic_env)
 global_env.update({'$': global_env})

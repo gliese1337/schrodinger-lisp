@@ -69,6 +69,8 @@ def main():
 
 	atexit.register(readline.write_history_file, histfile)
 
+	load("./stdlib.sch")
+
 	if len(sys.argv) > 1:
 		load(sys.argv[1])
 	repl()
