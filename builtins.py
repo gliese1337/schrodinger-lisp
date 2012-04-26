@@ -3,13 +3,23 @@
 from seval import eval, Env
 from sparser import to_string, isa, Symbol
 
+class Closure():
+	def __init__(self, clos_env, vars, sym, body):
+		self.clos_env = clos_env
+		self.vars = vars
+		self.sym = sym
+		self.body = body
+
+	def __call__(self, call_env, *args):
+		new_env = Env(zip(self.vars, args), self.clos_env)
+		new_env[self.sym] = call_env
+		return eval(self.body, new_env)
+		
+	def __repr__(self):
+		return "vau (%s)"%(','.join(self.vars),)
+
 def vau(clos_env, vars, call_env_sym, body):
-		def closure(call_env, *args):
-			#new_env = Env(zip(vars, args), clos_env)
-			new_env = Env(zip(vars, [call_env[arg] if isa(arg, Symbol) else arg for arg in args]), clos_env)
-			new_env[call_env_sym] = call_env
-			return eval(body, new_env)
-		return closure
+		return Closure(clos_env, vars, call_env_sym, body)
 
 def define(v,var,e):
 	val = eval(e, v)
@@ -40,6 +50,10 @@ def vprint(v,e):
 	print to_string(val)
 	return val
 
+def wrap(v,p):
+	p = eval(p,v)
+	return lambda v,*x: p(v,*[eval(expr,v) for expr in x])
+
 global_env = Env({
 	'+':	lambda v,x,y:eval(x,v)+eval(y,v),
 	'-':	lambda v,x,y:eval(x,v)-eval(y,v),
@@ -55,7 +69,7 @@ global_env = Env({
 	'cons':	lambda v,x,y:[eval(x,v)]+eval(y,v),
 	'car':	lambda v,x:eval(x,v)[0],
 	'cdr':	lambda v,x:eval(x,v)[1:],
-	'list':	lambda v,*x:[eval(expr, v) for exp in x],
+	'list':	lambda v,*x:[eval(expr, v) for expr in x],
 	'append':	lambda v,x,y:eval(x,v)+eval(y,v),
 	'len':	lambda v,x:len(eval(x,v)),
 	'symbol?':	lambda v,x:isa(eval(x,v),Symbol),
@@ -74,5 +88,8 @@ global_env = Env({
 	'begin': begin,
 	'print': vprint,
 	'eval': lambda v,e,x: eval(eval(x,v),eval(e,v)),
-	'@': lambda v,e,*x: eval(x,eval(e,v))
+	'@': lambda v,e,*x: eval(x,eval(e,v)),
+	'wrap': wrap
 })
+
+global_env.update({'$': global_env})
