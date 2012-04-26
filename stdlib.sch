@@ -1,15 +1,15 @@
 (:= q (vau (e) % e))
-(:= nil (q ()))
-(:= nil? (vau (e) % (= (eval % e) (q ()))))
+(:= nil '())
+(:= nil? (vau (e) % (= %::e '())))
 
-(:= @ (vau (proc args) % (eval % (cons (eval % proc) (eval % args)))))
+(:= @ (vau (proc args) % %::(cons %::proc %::args)))
 
 (:= map (vau (f l) % 
 	(seq
-		(:= fv (eval % f))
-		(:= lv (eval % l))
-		(if (nil? lv) (q ())
+		(:= fv %::f)
+		(:= lv %::l)
+		(if (nil? lv) '()
 			(cons (fv (car lv)) (self fv (cdr lv)))))))
 
 (:= fn (vau (args body) %
-	(wrap (eval % (list vau args (q $) body)))))
+	(wrap %::(list vau args '$ body))))

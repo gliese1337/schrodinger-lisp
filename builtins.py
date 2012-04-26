@@ -4,7 +4,7 @@ from stypes import Env
 from seval import eval
 from sparser import parse, to_string, isa, Symbol
 
-class Closure():
+class Combiner():
 	def __init__(self, clos_env, vars, sym, body):
 		self.clos_env = clos_env
 		self.vars = vars
@@ -79,7 +79,7 @@ basic_env = Env({
 	'cond':	cond,
 	':=':	defvar,
 	'<-':	setvar,
-	'vau':	lambda v,args,sym,body: Closure(v,args,sym,body),
+	'vau':	lambda v,args,sym,body: Combiner(v,args,sym,body),
 	'quote': lambda v,x: x,
 	'seq': sequence,
 	'print': vprint,

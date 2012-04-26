@@ -24,8 +24,13 @@ def parse(tokens):
 				if '(' == token: parencount += 1
 				elif ')' == token: parencount -= 1
 			return parse(tokens) if len(tokens) > 0 else None
+		elif "'" == token: #wrap the next expression in a quote
+			return [Symbol('quote'),parse(tokens)]
 		elif ')' == token:
 			raise SyntaxError('unexpected )')
+		elif tokens[0] == "::": #lookahead, desugar namespace into eval call
+			tokens.pop(0)
+			return [Symbol('eval'),atom(token),parse(tokens)]
 		else:
 			return atom(token)
 	except IndexError:
