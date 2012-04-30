@@ -19,14 +19,14 @@ class Closure():
 	def __repr__(self):
 		return "vau (%s)"%(','.join(self.vars),)
 
-def define(v,var,e):
+def defvar(v,var,e):
 	val = eval(e, v)
 	v[var] = val
 	return val
 	
 def setvar(v,var,e):
 	val = eval(e, v)
-	env.find(var)[var] = val
+	v.find(var)[var] = val
 	return val
 
 def cond(v,*x):
@@ -76,7 +76,7 @@ basic_env = Env({
 	'#f':	False,
 	'if':		lambda v,z,t,f: eval((t if eval(z,v) else f), v),
 	'cond':	cond,
-	':=':	define,
+	':=':	defvar,
 	'<-':	setvar,
 	'vau':	lambda v,args,sym,body: Closure(v,args,sym,body),
 	'quote': lambda v,x: x,
