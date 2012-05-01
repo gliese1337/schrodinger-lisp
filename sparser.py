@@ -1,30 +1,5 @@
-import string
-
 Symbol = str
 isa = isinstance
-
-def tokenize(s):
-	"Convert a string into a list of tokens."
-	i = 0
-	end = len(s)
-	delimiters = "();"
-	sym_illegal = string.whitespace+delimiters
-	tokens = []
-	while i < end:
-		if s[i] in string.whitespace:
-			i += 1
-			continue
-		elif s[i] in delimiters:
-			token = s[i]
-			i += 1
-		else:
-			n = i+1
-			while n != end and not s[n] in sym_illegal:
-				n += 1
-			token = s[i:n]
-			i = n
-		tokens.append(token)
-	return tokens
 
 def parse(tokens):
 	"Read an expression from a sequence of tokens."

@@ -1,7 +1,7 @@
 ### built-in globals
 
 from seval import eval, Env
-from sparser import tokenize, parse, to_string, isa, Symbol
+from sparser import parse, to_string, isa, Symbol
 
 class Closure():
 	def __init__(self, clos_env, vars, sym, body):

@@ -8,7 +8,8 @@ import traceback
 import readline
 import atexit
 from seval import eval
-from sparser import tokenize, parse, to_string
+from slexer import tokenize
+from sparser import parse, to_string
 from builtins import global_env
 
 #### Load from a file and run
