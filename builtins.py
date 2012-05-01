@@ -4,6 +4,14 @@ from stypes import Env, Tail
 from sparser import parse, to_string, isa, Symbol
 import operator
 
+class Continuation():
+	def __init__(self,k):
+		self.k = k
+	
+	def __call__(self, call_k, call_env, *args):
+		if len(args) != 1: raise Exception("Continuations take exactly 1 argument.")
+		return Tail(args[0],call_env,self.k)
+
 class Closure():
 	def __init__(self, clos_env, vars, sym, body):
 		self.clos_env = clos_env
@@ -15,6 +23,7 @@ class Closure():
 		new_env = Env(zip(self.vars, args), self.clos_env)
 		new_env[self.sym] = call_env
 		if not 'self' in args: new_env['self'] = self #safe recursion
+		if not 'return' in args: new_env['return'] = Continuation(k)
 		return Tail(self.body, new_env, k)
 		
 	def __repr__(self):
@@ -50,14 +59,28 @@ def vprint(k,v,x):
 	return Tail(x,v,print_k)
 
 def cps_map_eval(k,v,*x):
-	vx = []
+	"""
+	Evaluates the elements of an argument list,
+	creating continuations that will assign values
+	to the correct indices in the evaluated list.
+	"""
 	arglen = len(x)
+	if arglen == 0: return k([])
+	argv = [None]*arglen
+	done = [False]
 	def map_loop(i):
-		if i == arglen: return k(vx)
+		if i == arglen:
+			done[0] = True
+			return k(argv)
 		else:
 			def assign_val(vmx):
-				vx.append(vmx)
-				return map_loop(i+1)
+				if not done[0]:	#on the first time through,
+					argv[i] = vmx		#evaluate the next argument in the list
+					return map_loop(i+1)
+				else: #if this is a continuation call,
+					new_argv = argv[:]	#copy the other argument values
+					new_argv[i] = vmx	#and just overwrite this one
+					return k(new_argv)
 			return Tail(x[i],v,assign_val)
 	return map_loop(0)
 
