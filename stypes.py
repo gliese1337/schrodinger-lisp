@@ -18,3 +18,16 @@ class Env(dict):
 		elif not self.outer is None:
 			return self.outer.find(var)
 		else: raise ValueError("%s is not defined"%(var,))
+
+### tail call structure
+
+class Tail():
+	def __init__(self,expr,env,k):
+		self.expr = expr
+		self.env = env
+		self.k = k
+	
+	def __iter__(self):
+		yield self.expr
+		yield self.env
+		yield self.k
