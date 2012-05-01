@@ -1,6 +1,7 @@
 ### built-in globals
 
-from seval import eval, Env
+from stypes import Env
+from seval import eval
 from sparser import parse, to_string, isa, Symbol
 
 class Closure():
