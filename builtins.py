@@ -1,7 +1,9 @@
 ### built-in globals
 
 from stypes import Env, Tail
+from seval import eval
 from sparser import parse, to_string, isa, Symbol
+from threading import Thread
 import operator
 
 class Continuation():
@@ -51,12 +53,29 @@ def cond(k,v,*x):
 def sequence(k,v,*x):
 	if len(x) == 0: return k(None)
 	return Tail(x[0],v,k if len(x) == 1 else lambda vx: sequence(k,v,*x[1:]))
-	
-def vprint(k,v,x):
-	def print_k(val):
-		print to_string(val)
+
+def par(k,v,*x):
+	"""
+	Evaluates arguments in parallel, returning the
+	last listed value like sequence does.
+	Ensures that all parallel threads terminate
+	before continuing
+	"""
+	if len(x) == 0: return k(None)
+
+	final = {'done':False,'value':None}
+	def arg_k(val):	k(final['value']) if final['done'] else None
+
+	threads = [Thread(target=lambda ax:eval(ax,v,arg_k),args=(ax,))
+				for ax in x[:-1]]
+	for t in threads: t.start()
+
+	def par_k(val):
+		if not final['done']:
+			for t in threads: t.join()
+			final['done'], final['value'] = True, val
 		return k(val)
-	return Tail(x,v,print_k)
+	return Tail(x[-1],v,par_k) #make use of the current thread
 
 def cps_map_eval(k,v,*x):
 	"""
@@ -66,29 +85,41 @@ def cps_map_eval(k,v,*x):
 	"""
 	arglen = len(x)
 	if arglen == 0: return k([])
+
 	argv = [None]*arglen
-	done = [False]
-	def map_loop(mk,mv,i,*mx):
-		if len(mx) == 0:
-			done[0] = True
-			return k(argv)
-		else:
-			def assign_val(vmx):
-				if not done[0]:	#on the first time through,
-					argv[i] = vmx		#evaluate the next argument in the list
-					return map_loop(mk,mv,i+1,*mx[1:])
-				else: #if this is a continuation call,
-					new_argv = argv[:]	#copy the other argument values
-					new_argv[i] = vmx	#and just overwrite this one
-					return k(new_argv)
-			return Tail(mx[0],v,assign_val)
-	return map_loop(k,v,0,*x)
+	done = False
+	
+	def arg_thread(i,ax):
+		def assign_val(val):
+			if done:
+				new_argv = argv[:]
+				new_argv[i] = val
+				return k(new_argv)
+			else:
+				argv[i] = val
+		eval(ax,v,assign_val)
+
+	threads = [Thread(target=arg_thread,args=(i,ax))
+				for i, ax in enumerate(x[:-1])]
+
+	for t in threads: t.start()
+	arg_thread(arglen-1,x[-1]) #make use of the current thread
+	for t in threads: t.join()
+	
+	done = True
+	return k(argv)
 
 def wrap(k,v,p):
 	return Tail(p,v,
 		lambda vp:
 			k(lambda ck,cv,*x:
 				cps_map_eval(lambda vx: vp(ck,cv,*vx),cv,*x)))
+
+def vprint(k,v,x):
+	def print_k(val):
+		print to_string(val)
+		return k(val)
+	return Tail(x,v,print_k)
 
 def make_cps_binop(op):
 	return lambda k,v,x,y:Tail(x,v,lambda vx: Tail(y,v, lambda vy: k(op(vx,vy))))
@@ -123,6 +154,7 @@ basic_env = Env({
 	'vau':	lambda k,v,args,sym,body: k(Closure(v,args,sym,body)),
 	'quote': lambda k,v,x: k(x),
 	'seq': sequence,
+	'par': par,
 	'print': vprint,
 	'eval': lambda k,v,e,x: Tail(x,v,lambda vx: Tail(e,v,lambda ve: Tail(vx,ve,k))),
 	'wrap': wrap
