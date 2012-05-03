@@ -87,11 +87,11 @@ def cps_map_eval(k,v,*x):
 	if arglen == 0: return k([])
 
 	argv = [None]*arglen
-	done = False
+	done = [False]
 	
 	def arg_thread(i,ax):
 		def assign_val(val):
-			if done:
+			if done[0]:
 				new_argv = argv[:]
 				new_argv[i] = val
 				return k(new_argv)
@@ -103,11 +103,19 @@ def cps_map_eval(k,v,*x):
 				for i, ax in enumerate(x[:-1])]
 
 	for t in threads: t.start()
-	arg_thread(arglen-1,x[-1]) #make use of the current thread
-	for t in threads: t.join()
 	
-	done = True
-	return k(argv)
+	def arg_k(val):
+		if done[0]:
+			new_argv = argv[:]
+			new_argv[-1] = val
+			return k(new_argv)
+		else:
+			argv[-1] = val
+			for t in threads: t.join()
+			done[0] = True
+			return k(argv)
+	
+	return Tail(x[-1],v,arg_k)
 
 def wrap(k,v,p):
 	return Tail(p,v,
