@@ -1,6 +1,6 @@
-#### vernal.py
+#### schrodinger.py
 #
-# Interface for the Vernal interpreter
+# Interface for the Schrodinger interpreter
 
 import os
 import sys
