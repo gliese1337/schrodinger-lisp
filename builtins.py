@@ -63,19 +63,23 @@ def par(k,v,*x):
 	"""
 	if len(x) == 0: return k(None)
 
-	final = {'done':False,'value':None}
-	def arg_k(val):	k(final['value']) if final['done'] else None
+	final = [None]
 
-	threads = [Thread(target=lambda ax:eval(ax,v,arg_k),args=(ax,))
+	def call_k(val):
+		return k(final[0])
+
+	def par_thread(ax):
+		eval(ax,v,ArgK(lambda val: None,call_k))
+	
+	threads = [Thread(target=par_thread,args=(ax,))
 				for ax in x[:-1]]
 	for t in threads: t.start()
 
 	def par_k(val):
-		if not final['done']:
-			for t in threads: t.join()
-			final['done'], final['value'] = True, val
+		for t in threads: t.join()
+		final[0] = val
 		return k(val)
-	return Tail(x[-1],v,par_k) #make use of the current thread
+	return Tail(x[-1],v,ArgK(par_k,call_k))
 
 def cps_map_eval(k,v,*x):
 	"""
@@ -91,25 +95,27 @@ def cps_map_eval(k,v,*x):
 	def assign_val(i,val):
 		argv[i] = val
 
-	def reassign_val(i,val):
+	def reassign(i,val):
 		new_argv = argv[:]
 		new_argv[i] = val
 		return k(new_argv)
 
 	def arg_thread(i,ax):
-		eval(ax,v,ArgK(i,assign_val,reassign_val))
+		eval(ax,v,ArgK(	lambda val: assign_val(i,val),
+						lambda val: reassign(i,val)))
 
 	threads = [Thread(target=arg_thread,args=(i,ax))
 				for i, ax in enumerate(x[:-1])]
 
 	for t in threads: t.start()
 	
-	def arg_k(i,val):
-		argv[i] = val
+	def arg_k(val):
+		argv[-1] = val
 		for t in threads: t.join()
 		return k(argv)
 
-	return Tail(x[-1],v,ArgK(arglen-1,arg_k,reassign_val))
+	return Tail(x[-1],v,
+				ArgK(arg_k,lambda val: reassign(arglen-1,val)))
 
 def wrap(k,v,p):
 	return Tail(p,v,

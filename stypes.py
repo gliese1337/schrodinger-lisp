@@ -35,13 +35,12 @@ class Tail():
 ### self-modifying continuations for argument evaluation
 
 class ArgK():
-	def __init__(self,i,first,rest):
-		def fun(i,val):
-			r = first(i,val)
-			self.fun = rest
+	def __init__(self,first,rest):
+		def k(val):
+			r = first(val)
+			self.k = rest
 			return r
-		self.i = i
-		self.fun = fun
+		self.k = k
 
 	def __call__(self,val):
-		return self.fun(self.i,val)
+		return self.k(val)
