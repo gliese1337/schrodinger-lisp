@@ -31,3 +31,13 @@ class Tail():
 		yield self.expr
 		yield self.env
 		yield self.k
+
+### mutable continuations for argument evaluation
+
+class ArgK():
+	def __init__(self,i,fun):
+		self.i = i
+		self.fun = fun
+
+	def __call__(self,val):
+		return self.fun(self.i,val)

@@ -1,6 +1,6 @@
 ### built-in globals
 
-from stypes import Env, Tail
+from stypes import Env, Tail, ArgK
 from seval import eval
 from sparser import parse, to_string, isa, Symbol
 from threading import Thread
@@ -87,35 +87,35 @@ def cps_map_eval(k,v,*x):
 	if arglen == 0: return k([])
 
 	argv = [None]*arglen
-	done = [False]
+	argks = [None]*arglen
 	
+	def assign_val(i,val):
+		argv[i] = val
+
+	def reassign_val(i,val):
+		new_argv = argv[:]
+		new_argv[i] = val
+		return k(new_argv)
+
 	def arg_thread(i,ax):
-		def assign_val(val):
-			if done[0]:
-				new_argv = argv[:]
-				new_argv[i] = val
-				return k(new_argv)
-			else:
-				argv[i] = val
-		eval(ax,v,assign_val)
+		ak = ArgK(i,assign_val)
+		argks[i] = ak
+		eval(ax,v,ak)
 
 	threads = [Thread(target=arg_thread,args=(i,ax))
 				for i, ax in enumerate(x[:-1])]
 
 	for t in threads: t.start()
 	
-	def arg_k(val):
-		if done[0]:
-			new_argv = argv[:]
-			new_argv[-1] = val
-			return k(new_argv)
-		else:
-			argv[-1] = val
-			for t in threads: t.join()
-			done[0] = True
-			return k(argv)
-	
-	return Tail(x[-1],v,arg_k)
+	def arg_k(i,val):
+		argv[i] = val
+		for t in threads: t.join()
+		for ak in argks: ak.fun = reassign_val
+		return k(argv)
+
+	tail_k = ArgK(arglen-1,arg_k)
+	argks[-1] = tail_k
+	return Tail(x[-1],v,tail_k)
 
 def wrap(k,v,p):
 	return Tail(p,v,
