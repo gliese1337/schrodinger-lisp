@@ -32,10 +32,14 @@ class Tail():
 		yield self.env
 		yield self.k
 
-### mutable continuations for argument evaluation
+### self-modifying continuations for argument evaluation
 
 class ArgK():
-	def __init__(self,i,fun):
+	def __init__(self,i,first,rest):
+		def fun(i,val):
+			r = first(i,val)
+			self.fun = rest
+			return r
 		self.i = i
 		self.fun = fun
 
