@@ -3,7 +3,7 @@
 from stypes import Env, Tail, ArgK
 from seval import eval
 from sparser import parse, to_string, isa, Symbol
-from threading import Thread
+from threading import Thread, Condition, Lock
 import operator
 
 class Continuation():
@@ -64,8 +64,13 @@ def par(k,v,*x):
 	if len(x) == 0: return k(None)
 
 	final = [None]
+	finished = Condition(Lock())
 
 	def call_k(val):
+		finished.acquire()
+		if final[0] is None:
+			finished.wait()
+		finished.release()
 		return k(final[0])
 
 	def par_thread(ax):
@@ -76,8 +81,11 @@ def par(k,v,*x):
 	for t in threads: t.start()
 
 	def par_k(val):
-		for t in threads: t.join()
+		finished.acquire()
 		final[0] = val
+		finished.notifyAll()
+		finished.release()
+		for t in threads: t.join()
 		return k(val)
 	return Tail(x[-1],v,ArgK(par_k,call_k))
 
@@ -90,12 +98,23 @@ def cps_map_eval(k,v,*x):
 	arglen = len(x)
 	if arglen == 0: return k([])
 
+	counter = [arglen]
+	finished = Condition(Lock())
 	argv = [None]*arglen
 	
 	def assign_val(i,val):
 		argv[i] = val
+		finished.acquire()
+		counter[0] -= 1
+		if counter[0] == 0:
+			finished.notifyAll()
+		finished.release()
 
 	def reassign(i,val):
+		finished.acquire()
+		if counter[0] > 0:
+			finished.wait()
+		finished.release()
 		new_argv = argv[:]
 		new_argv[i] = val
 		return k(new_argv)
@@ -111,11 +130,18 @@ def cps_map_eval(k,v,*x):
 	
 	def arg_k(val):
 		argv[-1] = val
+		finished.acquire()
+		counter[0] -= 1
+		if counter[0] == 0:
+			finished.notifyAll()
+		else:
+			finished.wait()
+		finished.release()
 		for t in threads: t.join()
 		return k(argv)
 
 	return Tail(x[-1],v,
-				ArgK(arg_k,lambda val: reassign(arglen-1,val)))
+			ArgK(arg_k,lambda val: reassign(arglen-1,val)))
 
 def wrap(k,v,p):
 	return Tail(p,v,
