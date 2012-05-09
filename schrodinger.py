@@ -27,7 +27,9 @@ def load(filename):
 			try:
 				tokens = tokenize(full_line)
 				while len(tokens) > 0:
-					val = eval(parse(tokens),global_env)
+					tree = parse(tokens)
+					if tree is not None:
+						eval(tree,global_env)
 			except SystemExit:
 				exit()
 			except Exception as e:
@@ -52,8 +54,10 @@ def repl(prompt='vau> '):
 			try:
 				tokens = tokenize(full_line)
 				while len(tokens) > 0:
-					val = eval(parse(tokens),global_env)
-					if val is not None: print to_string(val)
+					tree = parse(tokens)
+					if tree is not None:
+						val = eval(tree,global_env)
+						if val is not None: print to_string(val)
 			except ValueError as e:
 				print e.message
 	except (KeyboardInterrupt, SystemExit):
