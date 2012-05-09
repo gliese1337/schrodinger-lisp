@@ -69,7 +69,7 @@ def repl(prompt='vau> '):
 #### on startup from the command line
 
 def main():
-	histfile = os.path.expanduser("~/.schroedinger-history")
+	histfile = os.path.expanduser("~/.schrodinger-history")
 	try: readline.read_history_file(histfile)
 	except IOError: pass
 
