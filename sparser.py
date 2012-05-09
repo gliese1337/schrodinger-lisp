@@ -3,22 +3,23 @@ isa = isinstance
 
 def parse(tokens):
 	"Read an expression from a sequence of tokens."
-	if len(tokens) == 0:
+	try:
+		token = tokens.pop(0)
+		if '(' == token:
+			L = []
+			while tokens[0] != ')':
+				L.append(parse(tokens))
+			tokens.pop(0) # pop off ')'
+			return L
+		elif ";" == token: #ignore the next full expression
+			parse(tokens)
+			return parse(tokens) if len(tokens) > 0 else None
+		elif ')' == token:
+			raise SyntaxError('unexpected )')
+		else:
+			return atom(token)
+	except IndexError:
 		raise SyntaxError('unexpected EOF while reading')
-	token = tokens.pop(0)
-	if '(' == token:
-		L = []
-		while tokens[0] != ')':
-			L.append(parse(tokens))
-		tokens.pop(0) # pop off ')'
-		return L
-	elif ";" == token: #ignore the next full expression
-		parse(tokens)
-		return parse(tokens) if len(tokens) > 0 else None
-	elif ')' == token:
-		raise SyntaxError('unexpected )')
-	else:
-		return atom(token)
 
 def atom(token):
 	"Numbers become numbers; every other token is a symbol."
