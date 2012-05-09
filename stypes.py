@@ -18,3 +18,29 @@ class Env(dict):
 		elif not self.outer is None:
 			return self.outer.find(var)
 		else: raise ValueError("%s is not defined"%(var,))
+
+### tail call structure
+
+class Tail():
+	def __init__(self,expr,env,k):
+		self.expr = expr
+		self.env = env
+		self.k = k
+	
+	def __iter__(self):
+		yield self.expr
+		yield self.env
+		yield self.k
+
+### self-modifying continuations for argument evaluation
+
+class ArgK():
+	def __init__(self,first,rest):
+		def k(val):
+			r = first(val)
+			self.k = rest
+			return r
+		self.k = k
+
+	def __call__(self,val):
+		return self.k(val)
