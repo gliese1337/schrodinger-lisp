@@ -3,7 +3,7 @@
 from stypes import Env, Tail, ArgK
 from seval import eval
 from sparser import parse, to_string, isa, Symbol
-from threading import Thread, Event, Lock, enumerate as thread_enum
+from threading import Thread, Event, Lock
 import operator
 
 class Continuation():
