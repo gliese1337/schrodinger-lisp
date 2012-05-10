@@ -21,7 +21,7 @@ def symbolState(s,start):
 				return delimState,s[start:i],i
 			i += 1
 	except IndexError:
-		return None,s[start:i-1],None
+		return None,s[start:i],None
 
 def tokenize(s):
 	state = symbolState
