@@ -51,14 +51,15 @@ def vprint(k,v,x):
 
 def cps_map_eval(k,v,*x):
 	vx = []
-	def map_loop(mk,mv,*mx):
-		if len(mx) == 0: return k(vx)
+	arglen = len(x)
+	def map_loop(i):
+		if i == arglen: return k(vx)
 		else:
 			def assign_val(vmx):
 				vx.append(vmx)
-				return map_loop(mk,mv,*mx[1:])
-			return Tail(mx[0],v,assign_val)
-	return map_loop(k,v,*x)
+				return map_loop(i+1)
+			return Tail(x[i],v,assign_val)
+	return map_loop(0)
 
 def wrap(k,v,p):
 	return Tail(p,v,
