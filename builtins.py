@@ -3,7 +3,7 @@
 from stypes import Env, Tail, ArgK
 from seval import eval
 from sparser import parse, to_string, isa, Symbol
-from threading import Thread, Event, Lock
+from threading import Thread, Event, Lock, current_thread
 import operator
 
 class Continuation():
@@ -105,36 +105,30 @@ def cps_map_eval(k,v,*x):
 		flock.release()
 		if counter[0] == 0:
 			finished.set()
+			return k(argv)
 
 	def reassign(i,val):
-		finished.wait()
+		if not finished.isSet():
+			cthread = current_thread()
+			cthread.daemon=True
+			finished.wait()
+			cthread.daemon=False
 		new_argv = argv[:]
 		new_argv[i] = val
 		return k(new_argv)
 
 	def arg_thread(i,ax):
 		eval(ax,v,ArgK(	lambda val: assign_val(i,val),
-						lambda val: reassign(i,val)))
+				lambda val: reassign(i,val)))
 
 	threads = [Thread(target=arg_thread,args=(i,ax))
 				for i, ax in enumerate(x[:-1])]
 
 	for t in threads: t.start()
 	
-	def arg_k(val):
-		argv[-1] = val
-		flock.acquire()
-		counter[0] -= 1
-		flock.release()
-		if counter[0] == 0:
-			finished.set()
-		else:
-			finished.wait()
-		for t in threads: t.join()
-		return k(argv)
-
 	return Tail(x[-1],v,
-			ArgK(arg_k,lambda val: reassign(arglen-1,val)))
+			ArgK(	lambda val: assign_val(arglen-1,val),
+				lambda val: reassign(arglen-1,val)))
 
 def wrap(k,v,p):
 	return Tail(p,v,
