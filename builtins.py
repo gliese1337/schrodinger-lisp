@@ -5,12 +5,16 @@ from seval import eval
 from sparser import parse, to_string
 
 def defvar(k,v,var,e):
+	if sym.tag != 'sym':
+		raise SyntaxError("Variable Names Must Be Symbols")
 	def def_k(val):
 		v[var.value()] = val
 		return k(val)
 	return Tail(e,v,def_k)
 	
 def setvar(k,v,sym,e):
+	if sym.tag != 'sym':
+		raise SyntaxError("Variable Names Must Be Symbols")
 	var = sym.value()
 	def set_k(val):
 		v.find(var)[var] = val
