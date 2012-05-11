@@ -1,7 +1,7 @@
 ### built-in globals
 
 from stypes import Env, Tail, ArgK, Closure, SClos, SSym, SNum, SBool, SList, SEnv
-from seval import eval
+from seval import eval, SPromise
 from sparser import parse, to_string
 
 def defvar(k,v,sym,e):
@@ -34,11 +34,6 @@ def sequence(k,v,*x):
 	return Tail(x[0],v,k if len(x) == 1 else lambda vx: sequence(k,v,*x[1:]))
 
 def cps_map_eval(callback,v,*x):
-	"""
-	Evaluates the elements of an argument list,
-	creating continuations that will assign values
-	to the correct indices in the evaluated list.
-	"""
 	arglen = len(x)
 	if arglen == 0: return callback([])
 	argv = [None]*arglen
@@ -56,12 +51,25 @@ def cps_map_eval(callback,v,*x):
 			return Tail(x[i],v,ArgK(assign_val,reassign))
 	return map_loop(0)
 
-def wrap(k,v,p):
+def ewrap(k,v,p):
 	def proc_k(proc):
 		vp = proc.value
 		if hasattr(vp,'__call__'):
 			return k(SClos(lambda ck,cv,*x:
 				cps_map_eval(lambda vx:
+					vp(ck,cv,*vx),cv,*x)))
+		raise ValueError("Cannot wrap non-procedure.")
+	return Tail(p,v,proc_k)
+
+def cps_map_promise(callback,v,*x):
+	callback(ax if ax.quote else SPromise(ax,v,k) for ax in x)
+
+def lwrap(k,v,p):
+	def proc_k(proc):
+		vp = proc.value
+		if hasattr(vp,'__call__'):
+			return k(SClos(lambda ck,cv,*x:
+				cps_map_promise(lambda vx:
 					vp(ck,cv,*vx),cv,*x)))
 		raise ValueError("Cannot wrap non-procedure.")
 	return Tail(p,v,proc_k)
@@ -105,7 +113,6 @@ def vappend(x,y):
 		raise ValueError("Cannot append to non-list.")
 	return SList(x.value+y.value if y.tag == 'list' else y)
 
-
 basic_env = Env({
 	'+':		make_cps_binop(vadd),
 	'-':		make_cps_binop(vsub),
@@ -137,8 +144,9 @@ basic_env = Env({
 	'print':	SClos(vprint),
 	'eval':		SClos(lambda k,v,e,x:
 				cps_map_eval(lambda args:
-					Tail(args[0],args[1].value,k),v,x,e)),
-	'wrap':		SClos(wrap)
+					Tail(args[0],args[1].value(),k),v,x,e)),
+	'ewrap':	SClos(ewrap),
+	'lwrap':	SClos(lwrap)
 })
 
 global_env = Env({},basic_env)

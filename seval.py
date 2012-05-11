@@ -1,7 +1,20 @@
 #### seval.py
 
-from stypes import Tail, SType
+from stypes import Tail, SType, ArgK
 from sparser import to_string
+
+class SPromise(SType):
+	def __init__(self,x,env,k):
+		self.tag = 'promise'
+		self.val = (x,env,ArgK(lambda x:x,k))
+	def value(self):
+		sval = eval(self.val)
+		while isinstance(sval,SPromise):
+			sval = eval(*sval.val)
+		self.tag = sval.tag
+		self.val = sval.val
+		self.value = lambda self: self.val
+		return self.val
 
 #### eval
 
