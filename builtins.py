@@ -62,7 +62,14 @@ def ewrap(k,v,p):
 	return Tail(p,v,proc_k)
 
 def cps_map_promise(callback,v,*x):
-	callback(ax if ax.quote else SPromise(ax,v,k) for ax in x)
+	def p_k(i,val):
+		new_argv = argv[:]
+		new_argv[i] = val
+		return callback(new_argv)
+	argv = [ax if ax.quote
+		else SPromise(ax,v,lambda val:p_k(i,val))
+		for i,ax in enumerate(x)]
+	return callback(argv)
 
 def lwrap(k,v,p):
 	def proc_k(proc):

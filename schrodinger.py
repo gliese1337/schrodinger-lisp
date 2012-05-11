@@ -35,7 +35,7 @@ def load(filename):
 			except Exception as e:
 				print "\nAn error occurred on line %d:\n\t%s\n" % (line_num,full_line)
 				print e.message
-				#traceback.print_exc()
+				traceback.print_exc()
 				break
 			full_line = ""
 		line_num += 1
