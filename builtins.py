@@ -4,18 +4,19 @@ from stypes import Env, Tail, ArgK, Closure, SClos, SSym, SNum, SBool, SList, SE
 from seval import eval
 from sparser import parse, to_string
 
-def defvar(k,v,var,e):
+def defvar(k,v,sym,e):
 	if sym.tag != 'sym':
 		raise SyntaxError("Variable Names Must Be Symbols")
+	var = sym.value
 	def def_k(val):
-		v[var.value()] = val
+		v[var] = val
 		return k(val)
 	return Tail(e,v,def_k)
 	
 def setvar(k,v,sym,e):
 	if sym.tag != 'sym':
 		raise SyntaxError("Variable Names Must Be Symbols")
-	var = sym.value()
+	var = sym.value
 	def set_k(val):
 		v.find(var)[var] = val
 		return k(val)
@@ -26,7 +27,7 @@ def cond(k,v,*x):
 		raise ValueError("No Branch Evaluates to True")
 	else:
 		(p, e) = x[0]
-		return Tail(p,v,lambda vp: Tail(e,v,k) if vp.value() else cond(k,v,*x[1:]))
+		return Tail(p,v,lambda vp: Tail(e,v,k) if vp.value else cond(k,v,*x[1:]))
 
 def sequence(k,v,*x):
 	if len(x) == 0: return k(None)
@@ -57,7 +58,7 @@ def cps_map_eval(callback,v,*x):
 
 def wrap(k,v,p):
 	def proc_k(proc):
-		vp = proc.value()
+		vp = proc.value
 		if hasattr(vp,'__call__'):
 			return k(SClos(lambda ck,cv,*x:
 				cps_map_eval(lambda vx:
@@ -75,34 +76,34 @@ def make_cps_binop(op):
 	return SClos(lambda k,v,x,y:cps_map_eval(lambda args:k(op(*args)),v,x,y))
 
 def vadd(x,y):
-	return SNum(x.value()+y.value())
+	return SNum(x.value+y.value)
 def vsub(x,y):
-	return SNum(x.value()-y.value())
+	return SNum(x.value-y.value)
 def vmul(x,y):
-	return SNum(x.value()*y.value())
+	return SNum(x.value*y.value)
 def vdiv(x,y):
-	vy = y.value()
+	vy = y.value
 	if vy == 0:
 		raise ArithmeticError("Divide By Zero")
-	return SNum(x.value()/vy)
+	return SNum(x.value/vy)
 def vgt(x,y):
-	return SBool(x.value()>y.value())
+	return SBool(x.value>y.value)
 def vlt(x,y):
-	return SBool(x.value()<y.value())
+	return SBool(x.value<y.value)
 def vge(x,y):
-	return SBool(x.value()>=y.value())
+	return SBool(x.value>=y.value)
 def vle(x,y):
-	return SBool(x.value()<=y.value())
+	return SBool(x.value<=y.value)
 def veq(x,y):
-	return SBool(x.value()==y.value())
+	return SBool(x.value==y.value)
 def iseq(x,y):
-	return SBool((x.tag != 'list') and (x.value() == vy.value()))
+	return SBool((x.tag != 'list') and (x.value == vy.value))
 def cons(x,y):
-	return SList([x]+y.value() if y.tag == 'list' else y)
+	return SList([x]+y.value if y.tag == 'list' else y)
 def vappend(x,y):
 	if x.tag != 'list':
 		raise ValueError("Cannot append to non-list.")
-	return SList(x.value()+y.value if y.tag == 'list' else y)
+	return SList(x.value+y.value if y.tag == 'list' else y)
 
 
 basic_env = Env({
@@ -118,15 +119,15 @@ basic_env = Env({
 	'eq?':		make_cps_binop(iseq),
 	'cons':		make_cps_binop(cons),
 	'append':	make_cps_binop(vappend),
-	'car':		SClos(lambda k,v,x:Tail(x,v, lambda vx: k(vx.value()[0]))),
-	'cdr':		SClos(lambda k,v,x:Tail(x,v, lambda vx: k(SList(vx.value()[1:])))),
+	'car':		SClos(lambda k,v,x:Tail(x,v, lambda vx: k(vx.value[0]))),
+	'cdr':		SClos(lambda k,v,x:Tail(x,v, lambda vx: k(SList(vx.value[1:])))),
 	'list':		SClos(lambda k,v,*x:cps_map_eval(lambda args: k(SList(args)),v,*x)),
-	'len':		SClos(lambda k,v,x:Tail(x,v,lambda vx: k(SNum(len(vx.value()))))),
+	'len':		SClos(lambda k,v,x:Tail(x,v,lambda vx: k(SNum(len(vx.value))))),
 	'symbol?':	SClos(lambda k,v,x:Tail(x,v,lambda vx: k(SBool(vx.tag == 'sym')))),
 	'list?':	SClos(lambda k,v,x:Tail(x,v,lambda vx: k(SBool(vx.tag == 'list')))),
 	'atom?':	SClos(lambda k,v,x:Tail(x,v,lambda vx: k(SBool(vx.tag != 'list')))),
 	'exit':		SClos(lambda k,v:exit()),
-	'if':		SClos(lambda k,v,z,t,f: Tail(z,v,lambda vz: Tail((t if vz.value() else f),v,k))),
+	'if':		SClos(lambda k,v,z,t,f: Tail(z,v,lambda vz: Tail((t if vz.value else f),v,k))),
 	'cond':		SClos(cond),
 	':=':		SClos(defvar),
 	'<-':		SClos(setvar),
@@ -136,7 +137,7 @@ basic_env = Env({
 	'print':	SClos(vprint),
 	'eval':		SClos(lambda k,v,e,x:
 				cps_map_eval(lambda args:
-					Tail(args[0],args[1].value(),k),v,x,e)),
+					Tail(args[0],args[1].value,k),v,x,e)),
 	'wrap':		SClos(wrap)
 })
 

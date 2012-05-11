@@ -5,14 +5,12 @@ isa = isinstance
 class SType():
 	def __init__(self,tag,val,quote=True):
 		self.tag = tag
-		self.val = val
+		self.value = val
 		self.quote = quote
 	def __repr__(self):
-		return "<%s: %s>"%(self.tag,self.val)
+		return "<%s: %s>"%(self.tag,self.value)
 	def __str__(self):
 		return self.__repr__()
-	def value(self):
-		return self.val
 
 def SList(l): return SType('list',l,False)
 def SSym(s): return SType('sym',s,False)
@@ -54,8 +52,12 @@ class Continuation():
 class Closure():
 	def __init__(self, clos_env, vars, sym, body):
 		self.clos_env = clos_env
-		self.vars = [asym.value() for asym in vars.value()]
-		self.sym = sym.value()
+		self.vars = []
+		for asym in vars.value:
+			if asym.tag == 'sym': self.vars.append(asym.value)
+			else: raise SyntaxError("Argument Names Must Be Symbols")
+		if sym.tag == 'sym': self.sym = sym.value
+		else: raise SyntaxError("Environment Binding Name Must Be a Symbol")
 		self.body = body
 
 	def __call__(self, k, call_env, *args):
