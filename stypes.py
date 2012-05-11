@@ -53,6 +53,8 @@ class Closure():
 	def __init__(self, clos_env, vars, sym, body):
 		self.clos_env = clos_env
 		self.vars = []
+		if vars.tag != 'list':
+			raise SyntaxError("No Argument Name List")
 		for asym in vars.value:
 			if asym.tag == 'sym': self.vars.append(asym.value)
 			else: raise SyntaxError("Argument Names Must Be Symbols")
