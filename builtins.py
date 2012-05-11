@@ -84,13 +84,13 @@ def lwrap(k,v,p):
 def vprint(k,v,x):
 	def print_k(val):
 		print to_string(val)
-		return k(val)
+		return k(val.strict())
 	return Tail(x,v,print_k)
 
 def make_cps_binop(op):
 	return SClos(lambda k,v,x,y:
-		cps_map_eval(lambda vx,vy:
-			k(op(vx.strict(),vy.strict())),v,x,y))
+		cps_map_eval(lambda args:
+			k(op(*(a.strict() for a in args))),v,x,y))
 
 def vadd(x,y):
 	return SNum(x.value+y.value)
@@ -155,7 +155,8 @@ basic_env = Env({
 				cps_map_eval(lambda args:
 					Tail(args[0],args[1].strict().value,k),v,x,e)),
 	'ewrap':	SClos(ewrap),
-	'lwrap':	SClos(lwrap)
+	'lwrap':	SClos(lwrap),
+	'defer':	SClos(lambda k,v,x:x if x.quote else SPromise(x,v,k))
 })
 
 global_env = Env({},basic_env)
