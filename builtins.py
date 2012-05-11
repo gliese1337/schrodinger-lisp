@@ -1,6 +1,6 @@
 ### built-in globals
 
-from stypes import Env, Tail, ArgK, Closure, SClos, SSym, SNum, SBool, SList, SEnv
+from stypes import Env, Tail, ArgK, Closure, SClos, SSym, SNum, SBool, SList, Cons, SEnv
 from seval import eval, SPromise
 from sparser import parse, to_string
 
@@ -133,7 +133,7 @@ basic_env = Env({
 	'<=':		make_cps_binop(vle),
 	'=':		make_cps_binop(veq),
 	'eq?':		make_cps_binop(iseq),
-	'cons':		SClos(lambda k,v,x:Tail(x,v, lambda vx: Tail(y,v, lambda vy: k(SList(Cons(vx,vy)))))),
+	'cons':		SClos(lambda k,v,x,y:Tail(x,v, lambda vx: Tail(y,v, lambda vy: k(SList(Cons(vx,vy)))))),
 	'car':		SClos(lambda k,v,x:Tail(x,v, lambda vx: k(vx.strict().value.car))),
 	'cdr':		SClos(lambda k,v,x:Tail(x,v, lambda vx: k(SList(vx.strict().value.cdr)))),
 	'list':		SClos(lambda k,v,*x:cps_map_eval(lambda args: k(SList(args)),v,*x)),
