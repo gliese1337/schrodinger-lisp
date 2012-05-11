@@ -14,11 +14,47 @@ class SType():
 	def strict(self):
 		return self
 
-def SList(l): return SType('list',l,False)
 def SSym(s): return SType('sym',s,False)
 def SNum(n): return SType('num',n)
 def SBool(b): return SType('bool',b)
 
+class SList(SType):
+	def __init__(self,val,quote=False):
+		self.tag = 'list'
+		self.quote = quote
+		if isa(val,Cons):
+			self.value = val
+		else:
+			c = Empty()
+			for v in reversed(val):
+				c = Cons(v,c)
+			self.value = c
+
+class Cons():
+	def __init__(self,car,cdr):
+		self.car = car
+		self.cdr = cdr
+		self.len = cdr.len+1 if isa(cdr,Cons) else 1
+
+	def __repr__(self):
+		return "("+' '.join(map(str,self))+")"
+	
+	def __iter__(self):
+		cur = self
+		while isa(cur,Cons):
+			if isa(cur,Empty):
+				return
+			yield cur.car
+			cur = cur.cdr
+		yield cur
+
+class Empty(Cons):
+	def __init__(self):
+		self.len = 0
+		pass
+	def __repr__(self):
+		return "(empty)"
+		
 
 ### binding environments
 
