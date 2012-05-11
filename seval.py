@@ -6,15 +6,15 @@ from sparser import to_string
 class SPromise(SType):
 	def __init__(self,x,env,k):
 		self.tag = 'promise'
-		self.val = (x,env,ArgK(lambda x:x,k))
-	def value(self):
-		sval = eval(self.val)
+		self.value = (x,env,ArgK(lambda x:x,k))
+	def strict(self):
+		sval = eval(self.value)
 		while isinstance(sval,SPromise):
 			sval = eval(*sval.val)
 		self.tag = sval.tag
-		self.val = sval.val
-		self.value = lambda self: self.val
-		return self.val
+		self.value = sval.value
+		self.strict = lambda self: self
+		return self
 
 #### eval
 

@@ -11,6 +11,8 @@ class SType():
 		return "<%s: %s>"%(self.tag,self.value)
 	def __str__(self):
 		return self.__repr__()
+	def strict(self):
+		return self
 
 def SList(l): return SType('list',l,False)
 def SSym(s): return SType('sym',s,False)

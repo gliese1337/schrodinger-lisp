@@ -12,4 +12,7 @@
 			(cons (fv (car lv)) (self fv (cdr lv)))))))
 
 (:= fn (vau (args body) %
-	(wrap (eval % (list vau args (q $) body)))))
+	(ewrap (eval % (list vau args (q $) body)))))
+
+(:= lfn (vau (args body) %
+	(lwrap (eval % (list vau args (q $) body)))))
