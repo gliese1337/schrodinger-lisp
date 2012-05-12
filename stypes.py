@@ -38,8 +38,7 @@ class ArgK():
 	def __init__(self,first,rest):
 		def k(val):
 			self.k = rest
-			r = first(val)
-			return r
+			return first(val)
 		self.k = k
 
 	def __call__(self,val):
