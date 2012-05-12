@@ -6,11 +6,13 @@
 	(k 6)
 	(k 7)
 	0)
-;(An argument that never returns)
-(print ((vau () % (seq (<- k return) 1))))
+
+;(An argument that never returns, but is saved by another thread)
+((vau () % (<- k return))) ;(grab a continuation into nothing)
 (:= k2 nil)
 (par
-	(print	(list ((vau () % (seq (<- k2 return) (k 3)))) 3))
+	(print	(list ((vau () % (seq (<- k2 return) (k 0)))) 3))
 	((vau () % (if (nil? k2) (self) (k2 1)))))
 
-		
+;(An argument that never returns at all)
+(print ((vau () % (+ (return 17) 2))))
