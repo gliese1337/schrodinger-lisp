@@ -37,8 +37,8 @@ class Tail():
 class ArgK():
 	def __init__(self,first,rest):
 		def k(val):
-			r = first(val)
 			self.k = rest
+			r = first(val)
 			return r
 		self.k = k
 

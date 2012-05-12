@@ -6,6 +6,8 @@ from sparser import parse, to_string, isa, Symbol
 from threading import Thread, Event, Lock, current_thread
 import operator
 
+pl = Lock()
+
 class Continuation():
 	def __init__(self,k):
 		self.k = k
@@ -74,7 +76,7 @@ def par(k,v,*x):
 		eval(ax,v,ArgK(lambda val: None,call_k))
 	
 	threads = [Thread(target=par_thread,args=(ax,))
-				for ax in x[:-1]]
+				for ax in x[:-1] if isa(ax,list)]
 	for t in threads: t.start()
 
 	def par_k(val):
@@ -105,30 +107,52 @@ def cps_map_eval(k,v,*x):
 		flock.release()
 		if counter[0] == 0:
 			finished.set()
+			pl.acquire()
+			print "SIGNALLED",i,val
+			pl.release()
 			return k(argv)
 
 	def reassign(i,val):
-		if not finished.isSet():
-			cthread = current_thread()
-			cthread.daemon=True
-			finished.wait()
-			cthread.daemon=False
 		new_argv = argv[:]
 		new_argv[i] = val
 		return k(new_argv)
 
+	def cont_thread(i,val):
+		finished.wait()
+		current_thread().daemon=False
+		pl.acquire()
+		print "UNBLOCKING"
+		pl.release()
+		reassign(i,val)
+
+	def reactivate(i,val):
+		pl.acquire()
+		print "REACTIVATING",i,val
+		pl.release()
+		if finished.isSet():
+			return reassign(i,val)
+		pl.acquire()
+		print "BLOCKING"
+		pl.release()
+		t = Thread(target=cont_thread,args=(i,val))
+		t.daemon = True
+		t.start()
+
 	def arg_thread(i,ax):
 		eval(ax,v,ArgK(	lambda val: assign_val(i,val),
-				lambda val: reassign(i,val)))
+				lambda val: reactivate(i,val)))
 
-	threads = [Thread(target=arg_thread,args=(i,ax))
-				for i, ax in enumerate(x[:-1])]
+	threads = [Thread(target=arg_thread,args=(i,ax)) for i, ax in enumerate(x[:-1])]
 
 	for t in threads: t.start()
-	
+
+	def arg_k(val):
+		r = assign_val(-1,val)
+		for t in threads: t.join()
+		return r
+
 	return Tail(x[-1],v,
-			ArgK(	lambda val: assign_val(arglen-1,val),
-				lambda val: reassign(arglen-1,val)))
+			ArgK(arg_k, lambda val: reactivate(-1,val)))
 
 def wrap(k,v,p):
 	return Tail(p,v,
@@ -138,7 +162,9 @@ def wrap(k,v,p):
 
 def vprint(k,v,x):
 	def print_k(val):
+		pl.acquire()
 		print to_string(val)
+		pl.release()
 		return k(val)
 	return Tail(x,v,print_k)
 
