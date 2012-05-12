@@ -3,7 +3,7 @@
 from stypes import Env, Tail, ArgK
 from seval import eval
 from sparser import parse, to_string, isa, Symbol
-from threading import Thread, Event, Lock, current_thread
+from threading import Thread, Event, Lock
 import operator
 
 pl = Lock()
@@ -96,47 +96,35 @@ def cps_map_eval(k,v,*x):
 	if arglen == 0: return k([])
 
 	counter = [arglen]
-	finished = Event()
 	flock = Lock()
 	argv = [None]*arglen
+	blocked = set()
 	
 	def assign_val(i,val):
 		argv[i] = val
 		flock.acquire()
 		counter[0] -= 1
-		flock.release()
 		if counter[0] == 0:
-			finished.set()
-			pl.acquire()
-			print "SIGNALLED",i,val
-			pl.release()
-			return k(argv)
+			flock.release()
+			for t in blocked: t.start()
+			r = k(argv)
+			for t in blocked: t.join()
+			blocked.clear()
+			return r
+		flock.release()
 
 	def reassign(i,val):
 		new_argv = argv[:]
 		new_argv[i] = val
 		return k(new_argv)
 
-	def cont_thread(i,val):
-		finished.wait()
-		current_thread().daemon=False
-		pl.acquire()
-		print "UNBLOCKING"
-		pl.release()
-		reassign(i,val)
-
 	def reactivate(i,val):
-		pl.acquire()
-		print "REACTIVATING",i,val
-		pl.release()
-		if finished.isSet():
+		flock.acquire()
+		if counter[0] == 0:
+			flock.release()
 			return reassign(i,val)
-		pl.acquire()
-		print "BLOCKING"
-		pl.release()
-		t = Thread(target=cont_thread,args=(i,val))
-		t.daemon = True
-		t.start()
+		blocked.add(Thread(target=reassign,args=(i,val)))
+		flock.release()
 
 	def arg_thread(i,ax):
 		eval(ax,v,ArgK(	lambda val: assign_val(i,val),
